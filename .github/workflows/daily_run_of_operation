@@ -1,0 +1,51 @@
+
+name: 每日数据清洗
+
+# ⏰ 触发机制：这里设定的是定时运行
+on:
+  schedule:
+    # 这里的格式是 Cron 表达式 (分 时 日 月 周)
+    # 注意：GitHub 使用的是 UTC 时间，比北京时间慢 8 小时
+    # 比如：UTC 00:00 = 北京时间 08:00
+    - cron: '0 0 * * *'  # 每天北京时间早上 8 点运行
+  
+  # 允许你手动点击按钮触发（方便测试）
+  workflow_dispatch:
+
+# 🔐 权限设置：允许代码修改仓库内容（为了保存生成的 Excel）
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 把仓库代码拉取下来
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. 安装 Python 环境
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      # 3. 安装依赖库 (pandas, openpyxl)
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      # 4. 运行你的清洗脚本
+      - name: Run cleaning script
+        run: python script.py
+
+      # 5. 把生成的 Excel 提交回仓库
+      - name: Commit and Push results
+        run: |
+          git config --global user.name "GitHub Action Bot"
+          git config --global user.email "actions@github.com"
+          git add clean_data*.xlsx
+          # 如果有新文件就提交，没有就不报错
+          git commit -m "自动更新：数据清洗结果" || echo "No changes to commit"
+          git push
